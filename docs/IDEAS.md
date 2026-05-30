@@ -4,20 +4,16 @@ Completed items -> `HISTORY.md`.
 
 ---
 
-## MVP (implement first)
+## Next (MVP gate)
 
-- [x] `src/scheduler.py` - filename parser, date comparison, state tracking (18 tests passing)
-- [x] `src/sender.py` - markdown->HTML via `markdown` pkg, SMTP via smtplib (Outlook/Gmail)
-- [x] `src/main.py` - hourly poll loop + daily send at configured time, delivery log
-- [x] `config/requirements.txt` - schedule, pyyaml, markdown
-- [ ] **End-to-end test** - create `config/config.yaml` with real credentials, create `test-letter-SEND-<tomorrow>.md` in letters_dir, run `python src/main.py`, temporarily set send_time to now+2min, verify email received + `Status: Delivered` header in file + log entry written
+- [ ] **End-to-end test** - create `config/config.yaml` with real credentials, drop a `test-letter-SEND-<tomorrow>.md` in `letters_dir`, temporarily set `send_time` to now+2min, run `python src/main.py`, verify: email received in inbox, HTML renders correctly, `Status: Delivered` header written back to file, log entry in `data/logs/deliveries.csv`
 
 ## Phase 2 - Quality
 
 - [ ] Retry logic for failed sends (3 attempts, exponential backoff)
 - [ ] Multiple recipient support (`recipients.alt` list in config)
 - [ ] Dashboard: print upcoming scheduled letters and sent history on startup
-- [ ] Export log entries back to workspace archive on delivery
+- [ ] Export log entries back to a local archive on delivery
 
 ## Phase 3 - Polish
 
@@ -32,12 +28,11 @@ Completed items -> `HISTORY.md`.
 
 | Decision | Choice | Reason |
 |----------|--------|--------|
-| SMTP provider | Outlook (primary) | Already used; app passwords supported |
+| SMTP provider | Outlook (primary), Gmail supported | App passwords supported on both |
 | Persistence | Filesystem only for MVP | Letter file exists = pending; `Status: Delivered` header = done. SQLite only if this proves insufficient |
-| Timezone | Australia/Perth (AWST, UTC+8) | User timezone |
-| Email format | Markdown -> HTML via futuremail | Nice rendering in inbox |
+| Timezone | Configurable - default `Australia/Perth` (AWST, UTC+8) | User-defined in config |
+| Email format | Markdown -> HTML via `markdown` pip package + smtplib | Clean rendering; no external service needed |
 | Retry | Phase 2 | MVP ships without it |
-| Startup | Manual terminal run (like StreamPilot) | No tray needed for MVP |
-| Sending layer | `futuremail` pip package + `schedule` | Handles markdown->HTML + SMTP. Do not reinvent |
-| Scheduling layer | Novel part - this daemon IS the scheduler | Existing futuremail libs are sending-only |
-| Poll frequency | Hourly | Low enough to not spin, accurate enough for daily sends |
+| Startup | Manual terminal run | No tray needed for MVP; shell:startup shortcut optional |
+| Scheduling layer | This daemon - polls hourly via `schedule` pkg | Existing libs are sending-only, not schedulers |
+| Poll frequency | Hourly + dedicated daily fire at `send_time` | Low spin, accurate enough for daily sends |
