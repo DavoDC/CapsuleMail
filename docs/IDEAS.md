@@ -6,7 +6,7 @@ Completed items -> `HISTORY.md`.
 
 ## Next (MVP gate)
 
-- [ ] **End-to-end test** - create `config/config.yaml` with real credentials, drop a `test-letter-SEND-<tomorrow>.md` in `letters_dir`, temporarily set `send_time` to now+2min, run `python src/main.py`, verify: email received in inbox, HTML renders correctly, `Status: Delivered` header written back to file, log entry in `data/logs/deliveries.csv`
+- [ ] **End-to-end test** *(manual prerequisite: create `config/config.yaml` with real credentials - that's on you to set up)* - drop a `test-letter-SEND-<tomorrow>.md` in `letters_dir`, temporarily set `send_time` to now+2min, run `python src/main.py`, verify: email received in inbox, HTML renders correctly, `Status: Delivered` header written back to file, log entry in `data/logs/deliveries.csv`
 
 ## Phase 2 - Quality
 
