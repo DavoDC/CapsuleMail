@@ -1,0 +1,24 @@
+# CapsuleMail configuration template
+# Copy this file to config/config.yaml and fill in your real values.
+# config/config.yaml is git-ignored - it never gets committed.
+
+# Email backend
+smtp:
+  provider: outlook  # outlook | gmail | custom_smtp
+  email: your.email@outlook.com
+  app_password: "xxxx xxxx xxxx xxxx"  # App password, not your login password
+
+# Scheduling
+scheduling:
+  send_time: "09:00"   # Local time (24-hour format)
+  timezone: "Australia/Perth"  # e.g. US/Eastern, Europe/London, Asia/Tokyo
+
+# Recipients
+recipients:
+  primary: your.email@outlook.com  # Who receives the sent email
+  alt: []  # Optional secondary recipients
+
+# Paths
+paths:
+  letters_dir: "/path/to/your/scheduled/emails"  # Folder containing .md files to send
+  logs_dir: "./data/logs"                         # Delivery log output
