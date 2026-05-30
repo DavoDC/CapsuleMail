@@ -6,11 +6,11 @@ Completed items -> `HISTORY.md`.
 
 ## MVP (implement first)
 
-- [ ] `src/scheduler.py` - filename parser (`SEND-YYYY-MM-DD` pattern), date comparison, state tracking (read/write `Status: Delivered` header)
-- [ ] `src/sender.py` - futuremail wrapper: load markdown file, send as HTML email via Outlook SMTP, return success/failure
-- [ ] `src/main.py` - poll loop (hourly via `schedule`), load config, scan `letters_dir`, call scheduler + sender, log to `data/logs/deliveries.csv`
-- [ ] `config/requirements.txt` - freeze: `futuremail`, `schedule`, `pyyaml`
-- [ ] End-to-end test: create `test-letter-SEND-<tomorrow>.md`, run daemon, verify email received + header updated + log written
+- [x] `src/scheduler.py` - filename parser, date comparison, state tracking (18 tests passing)
+- [x] `src/sender.py` - markdown->HTML via `markdown` pkg, SMTP via smtplib (Outlook/Gmail)
+- [x] `src/main.py` - hourly poll loop + daily send at configured time, delivery log
+- [x] `config/requirements.txt` - schedule, pyyaml, markdown
+- [ ] **End-to-end test** - create `config/config.yaml` with real credentials, create `test-letter-SEND-<tomorrow>.md` in letters_dir, run `python src/main.py`, temporarily set send_time to now+2min, verify email received + `Status: Delivered` header in file + log entry written
 
 ## Phase 2 - Quality
 
