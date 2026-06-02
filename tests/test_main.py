@@ -2,13 +2,156 @@
 
 import csv
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from main import log_delivery, poll
+from main import log_delivery, poll, print_dashboard, send_with_retry
+
+
+class TestSendWithRetry:
+    def _cfg(self):
+        return {"smtp": {}, "recipients": {"primary": "a@b.com"}}
+
+    def test_succeeds_first_attempt_no_sleep(self):
+        with (
+            patch("main.send_letter") as mock_send,
+            patch("main.time") as mock_time,
+        ):
+            send_with_retry("/letters/note.md", self._cfg())
+        mock_send.assert_called_once()
+        mock_time.sleep.assert_not_called()
+
+    def test_retries_on_transient_failure_succeeds_second(self):
+        calls = {"n": 0}
+
+        def fail_once(path, cfg):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise Exception("transient")
+
+        with (
+            patch("main.send_letter", side_effect=fail_once),
+            patch("main.time") as mock_time,
+        ):
+            send_with_retry("/letters/note.md", self._cfg())
+
+        assert calls["n"] == 2
+        mock_time.sleep.assert_called_once_with(10)
+
+    def test_retries_twice_succeeds_third(self):
+        calls = {"n": 0}
+
+        def fail_twice(path, cfg):
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise Exception("transient")
+
+        with (
+            patch("main.send_letter", side_effect=fail_twice),
+            patch("main.time") as mock_time,
+        ):
+            send_with_retry("/letters/note.md", self._cfg())
+
+        assert calls["n"] == 3
+        sleep_calls = [c[0][0] for c in mock_time.sleep.call_args_list]
+        assert sleep_calls == [10, 20]
+
+    def test_raises_after_all_retries_fail(self):
+        with (
+            patch("main.send_letter", side_effect=Exception("permanent")),
+            patch("main.time"),
+        ):
+            with pytest.raises(Exception, match="permanent"):
+                send_with_retry("/letters/note.md", self._cfg())
+
+    def test_sends_exactly_max_retries_times_on_all_fail(self):
+        with (
+            patch("main.send_letter", side_effect=Exception("fail")) as mock_send,
+            patch("main.time"),
+        ):
+            with pytest.raises(Exception):
+                send_with_retry("/letters/note.md", self._cfg())
+        assert mock_send.call_count == 3
+
+
+class TestPrintDashboard:
+    def _config(self, tmp_path):
+        return {
+            "paths": {
+                "letters_dir": str(tmp_path / "letters"),
+                "logs_dir": str(tmp_path / "logs"),
+            }
+        }
+
+    def test_shows_upcoming_letters(self, tmp_path, capsys):
+        cfg = self._config(tmp_path)
+        letters = tmp_path / "letters"
+        letters.mkdir()
+        future = date.today() + timedelta(days=3)
+        (letters / f"dear-me-SEND-{future}.md").write_text("hello")
+
+        print_dashboard(cfg)
+
+        out = capsys.readouterr().out
+        assert "Upcoming letters" in out
+        assert str(future) in out
+        assert "in 3d" in out
+
+    def test_shows_today_label(self, tmp_path, capsys):
+        cfg = self._config(tmp_path)
+        letters = tmp_path / "letters"
+        letters.mkdir()
+        today = date.today()
+        (letters / f"dear-me-SEND-{today}.md").write_text("hello")
+
+        print_dashboard(cfg)
+
+        assert "TODAY" in capsys.readouterr().out
+
+    def test_shows_overdue_label(self, tmp_path, capsys):
+        cfg = self._config(tmp_path)
+        letters = tmp_path / "letters"
+        letters.mkdir()
+        past = date.today() - timedelta(days=2)
+        (letters / f"dear-me-SEND-{past}.md").write_text("hello")
+
+        print_dashboard(cfg)
+
+        assert "overdue" in capsys.readouterr().out
+
+    def test_no_letters_message(self, tmp_path, capsys):
+        cfg = self._config(tmp_path)
+        (tmp_path / "letters").mkdir()
+
+        print_dashboard(cfg)
+
+        assert "No upcoming letters." in capsys.readouterr().out
+
+    def test_shows_recent_deliveries(self, tmp_path, capsys):
+        cfg = self._config(tmp_path)
+        (tmp_path / "letters").mkdir()
+        logs = tmp_path / "logs"
+        logs.mkdir()
+        log_path = logs / "deliveries.csv"
+        with open(log_path, "w", newline="") as f:
+            import csv as csv_mod
+            w = csv_mod.writer(f)
+            w.writerow(["timestamp", "file", "status"])
+            w.writerow(["2026-06-01 09:00:00", "letter.md", "delivered"])
+
+        print_dashboard(cfg)
+
+        out = capsys.readouterr().out
+        assert "Recent deliveries" in out
+        assert "letter.md" in out
+
+    def test_no_crash_when_letters_dir_missing(self, tmp_path, capsys):
+        cfg = self._config(tmp_path)
+        print_dashboard(cfg)  # letters dir doesn't exist - should not raise
 
 
 class TestLogDelivery:

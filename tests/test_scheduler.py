@@ -8,7 +8,7 @@ import os
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from scheduler import parse_send_date, is_due, get_pending_letters, mark_delivered
+from scheduler import parse_send_date, is_due, get_pending_letters, get_upcoming_letters, mark_delivered
 
 
 class TestParseSendDate:
@@ -76,6 +76,49 @@ class TestGetPendingLetters:
 
     def test_nonexistent_dir_returns_empty(self):
         assert get_pending_letters("/nonexistent/path/xyz") == []
+
+
+class TestGetUpcomingLetters:
+    def test_returns_future_and_past_undelivered(self, tmp_path):
+        past = date.today() - timedelta(days=3)
+        future = date.today() + timedelta(days=5)
+        (tmp_path / f"letter-SEND-{past}.md").write_text("past")
+        (tmp_path / f"letter-SEND-{future}.md").write_text("future")
+
+        result = get_upcoming_letters(str(tmp_path))
+        assert len(result) == 2
+
+    def test_excludes_delivered(self, tmp_path):
+        past = date.today() - timedelta(days=1)
+        f = tmp_path / f"letter-SEND-{past}.md"
+        f.write_text("Status: Delivered 2026-05-01 09:00:00\nhello")
+
+        result = get_upcoming_letters(str(tmp_path))
+        assert result == []
+
+    def test_sorted_by_date(self, tmp_path):
+        d1 = date.today() + timedelta(days=10)
+        d2 = date.today() + timedelta(days=2)
+        d3 = date.today() + timedelta(days=7)
+        for d in [d1, d2, d3]:
+            (tmp_path / f"letter-SEND-{d}.md").write_text("x")
+
+        result = get_upcoming_letters(str(tmp_path))
+        dates = [r[0] for r in result]
+        assert dates == sorted(dates)
+
+    def test_empty_dir_returns_empty(self, tmp_path):
+        assert get_upcoming_letters(str(tmp_path)) == []
+
+    def test_nonexistent_dir_returns_empty(self):
+        assert get_upcoming_letters("/nonexistent/xyz") == []
+
+    def test_includes_today(self, tmp_path):
+        today = date.today()
+        (tmp_path / f"letter-SEND-{today}.md").write_text("today")
+        result = get_upcoming_letters(str(tmp_path))
+        assert len(result) == 1
+        assert result[0][0] == today
 
 
 class TestMarkDelivered:

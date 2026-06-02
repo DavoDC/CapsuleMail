@@ -53,6 +53,25 @@ def get_pending_letters(letters_dir: str) -> list[str]:
     return pending
 
 
+def get_upcoming_letters(letters_dir: str) -> list[tuple[date, str]]:
+    """Return (send_date, filepath) for all undelivered letters, sorted by date."""
+    try:
+        paths = list(Path(letters_dir).glob("*.md"))
+    except OSError:
+        return []
+
+    result = []
+    for p in paths:
+        send_date = parse_send_date(p.name)
+        if send_date is None:
+            continue
+        if _is_delivered(str(p)):
+            continue
+        result.append((send_date, str(p)))
+    result.sort()
+    return result
+
+
 def mark_delivered(filepath: str, timestamp: str) -> None:
     """Prepend 'Status: Delivered <timestamp>' to the letter file. Idempotent."""
     with open(filepath, "r", encoding="utf-8") as f:
