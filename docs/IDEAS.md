@@ -8,21 +8,6 @@ Completed items -> `HISTORY.md`.
 
 - [ ] **End-to-end test** *(manual prerequisite: create `config/config.yaml` with real credentials - that's on you to set up)* - drop a `test-letter-SEND-<tomorrow>.md` in `letters_dir`, temporarily set `send_time` to now+2min, run `python src/main.py`, verify: email received in inbox, HTML renders correctly, `Status: Delivered` header written back to file, log entry in `data/logs/deliveries.csv`
 
-## Automated Tests - Gaps
-
-`scheduler.py` is fully covered (18 tests). Two modules have zero coverage:
-
-**sender.py** (high value - subject line logic runs on every send):
-- `_subject_from_file`: filename -> subject line cleanup. Pure function. Test: SEND-suffix stripped, dashes -> spaces, title case, already-title input, no SEND suffix preserved.
-- `_md_to_html`: markdown rendering. Test: bold, link, plain text round-trips. Verify output is HTML string (starts with `<`).
-- `send_letter` body: Status-header strip before send. Testable by mocking smtplib.SMTP and asserting the MIME body excludes the "Status: Delivered" line.
-
-**main.py** (high value - poll() is the core delivery loop):
-- `log_delivery`: CSV write. Test: creates file + header on first call, appends on second call, creates parent dir if missing.
-- `poll` - no pending letters: returns without calling send. Test: mock get_pending_letters returns []; assert send_letter not called.
-- `poll` - send succeeds: calls send_letter, mark_delivered, log_delivery with "delivered". Test: mock all three; assert calls in order.
-- `poll` - send raises Exception: logs "failed: ...", does NOT call mark_delivered. Test: mock send_letter to raise; assert mark_delivered not called, log_delivery called with "failed" status.
-
 ## Phase 2 - Quality
 
 - [ ] Retry logic for failed sends (3 attempts, exponential backoff)

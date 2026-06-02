@@ -4,6 +4,20 @@ Completed work, in reverse chronological order.
 
 ---
 
+## 2026-06-02 - Test coverage: sender.py and main.py
+
+Added `tests/test_sender.py` and `tests/test_main.py` - both modules had zero coverage.
+
+- `_subject_from_file`: 6 tests (SEND-suffix strip, title-case, no-suffix, full path)
+- `_md_to_html`: 5 tests (plain text, bold, link, empty)
+- `send_letter`: 1 test (Status-header stripped from MIME body via FakeSMTP)
+- `log_delivery`: 4 tests (creates header, appends, creates parent dir, filename-only)
+- `poll`: 5 tests (no pending, success path, failure path, multiple letters, partial failure)
+
+Total suite: 18 -> 39 tests.
+
+---
+
 ## 2026-05-30 - MVP built (repo created, scaffold, TDD, implementation)
 
 **What was built:**
