@@ -4,6 +4,16 @@ Completed work, in reverse chronological order.
 
 ---
 
+## 2026-06-03 - Phase 2: retry logic, startup dashboard, multiple recipients
+
+- `send_with_retry` in `main.py` - 3 attempts, exponential backoff (10s, 20s). Raises on final failure so caller logs it. Replaces bare `send_letter` call in `poll()`.
+- `print_dashboard` in `main.py` - shows upcoming letters (TODAY / in Nd / Nd overdue labels) + last 5 deliveries from CSV log. Called on daemon startup.
+- `get_upcoming_letters` in `scheduler.py` - returns all undelivered letters (past + future) sorted by date. Used by dashboard.
+- Multiple recipient support was already implemented in `sender.py` (`config["recipients"].get("alt", [])`) - confirmed and documented.
+- Tests: 10 new tests (5 `TestSendWithRetry`, 6 `TestPrintDashboard`, 6 `TestGetUpcomingLetters`).
+
+---
+
 ## 2026-06-02 - Test coverage: sender.py and main.py
 
 Added `tests/test_sender.py` and `tests/test_main.py` - both modules had zero coverage.

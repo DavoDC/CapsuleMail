@@ -10,9 +10,6 @@ Completed items -> `HISTORY.md`.
 
 ## Phase 2 - Quality
 
-- [ ] Retry logic for failed sends (3 attempts, exponential backoff)
-- [ ] Multiple recipient support (`recipients.alt` list in config)
-- [ ] Dashboard: print upcoming scheduled letters and sent history on startup
 - [ ] Export log entries back to a local archive on delivery
 
 ## Phase 3 - Polish
