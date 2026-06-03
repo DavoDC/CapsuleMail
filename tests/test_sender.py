@@ -56,6 +56,80 @@ class TestMdToHtml:
         assert isinstance(html, str)
 
 
+class TestSendLetterProviderAndRecipients:
+    """Tests for provider selection and recipient list logic in send_letter."""
+
+    def _make_fake_smtp(self, captured):
+        class FakeSMTP:
+            def __init__(self, host, port):
+                captured["host"] = host
+                captured["port"] = port
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def ehlo(self):
+                pass
+            def starttls(self, context=None):
+                pass
+            def login(self, user, pw):
+                pass
+            def sendmail(self, frm, to, msg_str):
+                captured["to"] = to
+                captured["msg"] = msg_str
+        return FakeSMTP
+
+    def test_gmail_provider_uses_gmail_host(self, tmp_path):
+        letter = tmp_path / "note-SEND-2026-05-10.md"
+        letter.write_text("Hello.")
+        config = {
+            "smtp": {"provider": "gmail", "email": "a@gmail.com", "app_password": "x"},
+            "recipients": {"primary": "a@gmail.com"},
+        }
+        captured = {}
+        with patch("sender.smtplib.SMTP", self._make_fake_smtp(captured)):
+            send_letter(str(letter), config)
+        assert "gmail" in captured["host"]
+
+    def test_unknown_provider_falls_back_to_outlook(self, tmp_path):
+        letter = tmp_path / "note-SEND-2026-05-10.md"
+        letter.write_text("Hello.")
+        config = {
+            "smtp": {"provider": "custom_provider", "email": "a@b.com", "app_password": "x"},
+            "recipients": {"primary": "a@b.com"},
+        }
+        captured = {}
+        with patch("sender.smtplib.SMTP", self._make_fake_smtp(captured)):
+            send_letter(str(letter), config)
+        assert "outlook" in captured["host"]
+
+    def test_alt_recipients_included_in_sendmail(self, tmp_path):
+        letter = tmp_path / "note-SEND-2026-05-10.md"
+        letter.write_text("Hello.")
+        config = {
+            "smtp": {"provider": "outlook", "email": "a@b.com", "app_password": "x"},
+            "recipients": {"primary": "primary@b.com", "alt": ["alt1@b.com", "alt2@b.com"]},
+        }
+        captured = {}
+        with patch("sender.smtplib.SMTP", self._make_fake_smtp(captured)):
+            send_letter(str(letter), config)
+        assert "alt1@b.com" in captured["to"]
+        assert "alt2@b.com" in captured["to"]
+        assert "primary@b.com" in captured["to"]
+
+    def test_no_alt_recipients_sends_to_primary_only(self, tmp_path):
+        letter = tmp_path / "note-SEND-2026-05-10.md"
+        letter.write_text("Hello.")
+        config = {
+            "smtp": {"provider": "outlook", "email": "a@b.com", "app_password": "x"},
+            "recipients": {"primary": "primary@b.com"},
+        }
+        captured = {}
+        with patch("sender.smtplib.SMTP", self._make_fake_smtp(captured)):
+            send_letter(str(letter), config)
+        assert captured["to"] == ["primary@b.com"]
+
+
 class TestSendLetterStatusHeaderStrip:
     """Tests that send_letter strips the Status: header before sending."""
 
